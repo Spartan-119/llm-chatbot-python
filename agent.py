@@ -10,8 +10,8 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain import hub
 from utils import get_session_id
 
+from tools.vector import get_movie_plot
 
-# Create a movie chat chain
 chat_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", "You are a movie expert providing information about movies."),
@@ -21,20 +21,22 @@ chat_prompt = ChatPromptTemplate.from_messages(
 
 movie_chat = chat_prompt | llm | StrOutputParser()
 
-# Create a set of tools
 tools = [
     Tool.from_function(
         name="General Chat",
         description="For general movie chat not covered by other tools",
         func=movie_chat.invoke,
+    ), 
+    Tool.from_function(
+        name="Movie Plot Search",  
+        description="For when you need to find information about movies based on a plot",
+        func=get_movie_plot, 
     )
 ]
 
-# Create chat history callback
 def get_memory(session_id):
     return Neo4jChatMessageHistory(session_id=session_id, graph=graph)
 
-# Create the agent
 agent_prompt = PromptTemplate.from_template("""
 You are a movie expert providing information about movies.
 Be as helpful as possible and return as much information as possible.
@@ -88,7 +90,6 @@ chat_agent = RunnableWithMessageHistory(
     history_messages_key="chat_history",
 )
 
-# Create a handler to call the agent
 def generate_response(user_input):
     """
     Create a handler that calls the Conversational agent
